@@ -12,14 +12,44 @@ from sklearn.metrics import r2_score
 import missingno as msno
 import functools 
 
-class DataPreProcessor():
+'''
+Usage: 
+    this class takes in pandas data frame and perform some preprecessing to the data frame as needed: 
+    1) The input data will be preserved as `ori_df`
+    2) empty rows will be dropped
+    3) duplicated rows will be dropped 
+    4) impute all columns by calling `impute_all` member function and this will return the imputed df for LSTM use
     
-    def __init__(self, input_df, time_var, verbose = False, show_graph = True):
+Limitation: 
+    Currently the preprocess is set to impute for each column such that will automatically find the imputation
+    method amond selected list that will produce the minimun MSE (mean square error) from the synthetic random
+    sequence pulled from the columns longest non-missing record after dropping duplicates and empty rows. 
+    the randomness is not cross-validated and due to the nature of the randomization this will not guarantee to be
+    the same outcome (reproducability) for each run. please notice this. 
+
+Variable: 
+    1) input_df: the input pandas DataFrame from the DataRetriver class attribbute can be passed into this class
+    2) time_var: the class require user to specified the time_var from the data frame so that it can be used as 
+        column index later on and perform cleaning 
+    3) verbose: (default: False) optional arg shows the progress and message of imputatino process
+    4) show_graph: (default: False) optional arg shows wether to display tge imputation graph 
+
+Attributes: 
+
+    1) df: Dataframe parsed into the class when first initialized and will be updated through class methods
+    2) ori_df: DF parsed into class that will not be modified once passed. 
+    3) time_var
+    4) verbose
+    5)show_graph
+'''
+
+class DataPreProcessor():
+    def __init__(self, input_df, time_var, verbose = False, show_graph = False):
         self.df = copy(input_df)
         self.ori_df = copy(input_df)
         self.time_var = time_var
         self.verbose = verbose
-        self.show_graph = True
+        self.show_graph = show_graph
     
     def get_processed_data(self): 
         return self.df

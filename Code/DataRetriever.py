@@ -10,6 +10,34 @@ from datetime import datetime, timedelta
 from tqdm import tqdm 
 import base64 
 import functools 
+'''
+Usage: 
+    this class is implemented to use the http ackend service to retreive/scrap the data from the 
+    web service from webenv.net. from the pre setted up deviceID and corresponding port in python dictionary 
+    
+WorkFlow: 
+    1) the class is initialized and some information is required to established the necessary credentital for 
+        the data retreival 
+    2) after specifying the device and ports to be used (using update or add device function) default will set
+        to be used for the WebEnv Server room's device ID. ""will need to be manually update for other cases""
+    3) retreive and collect the .json file from the API request then unpack with json package 
+    4) will map the device and map and reorganize into the closedt minute and output pandas DataFrame.
+    
+Variable:
+    1) start_date: the starting date 
+    2) end_date: the end date of the history period 
+    3) acc: account information 
+    4) pwd: this will be parsed and convert into 64 bit to send request 
+    5) verbose: (default:True)
+    
+Attributes: 
+    Some cass attributes will be initialized depending on the variables can be used
+    1) lst_device: the list for device ID to retreive information 
+    2) lst_port: the list of port that corresponds to the deviceID from the previous attribubtes
+    3) device_ID: dictionary that will map 1) and 2) 
+    4) DateIndex: current hard coded into "1min" time period.
+    5) dict_dev2name: the device and port variable encoding mapping 
+'''
     
 class DataRetriever:
     
@@ -120,6 +148,8 @@ class DataRetriever:
         Variables: None
         Usage: 
             The method will retrive all datalog with the deviceID and specified port number. 
+            the requested data from the web service return is in .json format will be dumped into python panda 
+            for further preprocessing
         Return: 
             A pandas DataFrame, merged
         '''
