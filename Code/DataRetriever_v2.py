@@ -5,6 +5,7 @@
 
 import json 
 import requests
+import sys
 import pandas as pd
 from datetime import datetime, timedelta
 from tqdm import tqdm 
@@ -43,14 +44,12 @@ class DataRetriever:
     
     ## initialize
     def __init__(self, start_date:str, end_date:str, acct:str, pwd:str, verbose = True):
-        self.API = 'http://www.webenv.net/noviows/novio.svc/GetDataLog'
+        self.API = 'https://www.webenv.net/noviows/novio.svc/GetDataLog'
         self.start_date = start_date
         self.end_date = end_date
         self.auth = base64.b64encode(bytes(acct + ':' + pwd, 'utf-8')).decode('ascii')
         self.verbose = verbose
-        self.lst_device = [] ## initialize as empty list
-        self.lst_port = [] ## initialize as empty list
-        self.deviceID = dict(zip(self.lst_device, self.lst_port))
+        self.deviceID = dict()
         self.DateIndex = pd.date_range(start_date, str(int(end_date) + 1), freq='1min').to_frame(index = False, name = 'LogTime')
         self.merged_df = None
         self.dict_dev2name = {} ## initialize as empty dictionary 
@@ -65,42 +64,43 @@ class DataRetriever:
             return;
     
     def get_deviceID(self):
-        for pos, k in enumerate(self.deviceID.keys()):
-            print("#%2s Port %3s :" %(pos,k), end = '')
-            print(",".join(self.deviceID[k]))
+        if self.deviceID.keys():
+            for pos, k in enumerate(self.deviceID.keys()):
+                print("#%2s Port [#%3s] :" %(pos,k), end = '')
+                print(",".join(self.deviceID[k]))
+        else: 
+            sys.stderr.write("No record found, please enter device to proceed")
         
-    def add_device(self, deviceID):
-        
-        ## check input type and convert to python dictionary, expected json convert to dict
-        if not isinstance(deviceID, dict):
-            json2dict = json.loads(deviceID)
-            lst_devices = []
-            lst_ports =[]
-            len_check = []
-            for i, (key, val) in enumerate(json2dict.items()):
-                #print(key, val)
-                len_check.append(len(val))
-                if i == 0: 
-                    lst_devices = val
-                    self.lst_device.append(val)
-                elif i == 1:
-                    lst_ports = val
-                    self.lst_port.append(val)
-            ## check the length matches 
-            if len(len_check) == 2:
-                if all(l == len_check[0] for l in len_check):
-                    ## refresh `self.deviceID`
-                    self.deviceID = dict(zip(self.lst_device, self.lst_port))
-                    sys.stdout.write("Number of Devices entered: #%3s \n" %len_check[0])
-                    for key, val in zip(lst_devices, lst_ports):
-                        sys.stdout.write("Device [#%3s] ports:" %key)
-                        for elmt in val: 
-                            sys.stdout.write("#%2s " %elmt)
-                        sys.stdout.write('\n')
-                else:
-                    sys.stderr.write("Number of Devices and Ports unmatched... Devices:#%3s, Ports:#%3s" %(len_check[0],len_check[1]))
-            else: 
-                sys.stderr.write("Unexpected or Extra variables entered.")
+    def add_device(self, deviceID:str):
+            ## check input type and convert to python dictionary, expected json convert to dict
+            if not isinstance(deviceID, dict):
+                json2dict = json.loads(deviceID)
+                lst_devices = []
+                lst_ports =[]
+                len_check = []
+                for i, (key, val) in enumerate(json2dict.items()):
+                    #print(key, val)
+                    len_check.append(len(val))
+                    if i == 0: 
+                        lst_devices = val
+                    elif i == 1:
+                        lst_ports = val
+                ## check the length matches 
+                if len(len_check) == 2:
+                    if all(l == len_check[0] for l in len_check):
+                        sys.stdout.write("Number of Devices entered: #%3s \n" %len_check[0])
+                        for key, val in zip(lst_devices, lst_ports):
+                            sys.stdout.write("Device [#%3s] ports:" %key)
+                            for elmt in val: 
+                                sys.stdout.write("#%2s " %elmt)
+                            sys.stdout.write('\n')
+                            
+                        ##update instance 
+                        self.deviceID.update(zip(lst_devices, lst_ports))
+                    else:
+                        sys.stderr.write("Number of Devices and Ports unmatched... Devices:#%3s, Ports:#%3s" %(len_check[0],len_check[1]))
+                else: 
+                    sys.stderr.write("Unexpected or Extra variables entered.")
     
     def convert_closet_minute(self, input_str:str, verbose = False):
         date = datetime.strptime(input_str,'%Y-%m-%d %H:%M:%S')
@@ -138,8 +138,6 @@ class DataRetriever:
         #self.df_out += place_hold
         if self.verbose: 
             print("Data Retrieval complete")
-        #df = functools.reduce(lambda left,right: pd.merge(left,right,on=['LogTime'],how='outer'), place_hold)
-        df_out.columns = [self.dict_dev2name[x] for x in df_out.columns]
         if self.verbose: print("Merging completed.")
         return df_out.drop_duplicates()
     
